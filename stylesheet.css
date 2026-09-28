@@ -1,0 +1,72 @@
+/* Adapted from https://github.com/jonbarron/jonbarron.github.io.
+   Retains the original 800px layout, Lato typography, link colors,
+   circular portrait, and thumbnail-led research rows. */
+@font-face{font-family:Lato;font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/lato-regular.woff2') format('woff2')}
+@font-face{font-family:Lato;font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/lato-bold.woff2') format('woff2')}
+@font-face{font-family:Lato;font-style:italic;font-weight:400;font-display:swap;src:url('assets/fonts/lato-italic.woff2') format('woff2')}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:#202020;font-family:Lato,Verdana,Helvetica,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:#1772d0;text-decoration:none}
+a:hover,a:focus{color:#b6650e}
+a:focus-visible{outline:2px solid #1772d0;outline-offset:4px;border-radius:2px}
+strong{font-weight:700}
+p{margin:0 0 12px}
+.page{width:100%;max-width:800px;margin:0 auto;padding:22px 0 28px}
+.intro{display:grid;grid-template-columns:63% 37%;align-items:center;margin-bottom:10px}
+.bio{padding:20px}
+h1{font-size:32px;font-weight:400;line-height:1.2;text-align:center;margin:4px 0 24px}
+.portrait{padding:20px}
+.portrait img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;object-position:50% 52%;border-radius:50%}
+.contact{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 9px;margin-top:19px;line-height:1.8}
+.contact span{color:#7a7a7a}
+.section-intro{padding:16px 20px 2px}
+h2{font-size:22px;line-height:1.25;font-weight:400;margin:0 0 12px}
+.paper{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;gap:0;padding:16px 0;margin-bottom:8px;scroll-margin-top:24px}
+.paper-image{display:flex;align-items:center;justify-content:center;padding:4px 20px;width:200px;min-height:140px}
+.paper-image img{display:block;width:160px;height:auto;max-height:165px;object-fit:contain}
+.paper-body{padding:0 20px 0 0}
+h3{font-size:14px;font-weight:700;line-height:1.45;margin:0 0 4px}
+.authors,.venue,.paper-links{margin:0 0 3px;line-height:1.4}
+.venue{color:#535353}
+.equal-contribution{font-size:11px;white-space:nowrap}
+.summary{margin:9px 0 0;line-height:1.5}
+.text-section{padding:14px 20px 6px}
+.text-section h2{margin-bottom:15px}
+.timeline{margin:0 0 10px}
+.timeline>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:baseline;margin-bottom:13px}
+.timeline dt{font-weight:700}
+.timeline dt span{display:block;font-weight:400;color:#535353}
+.timeline dd{margin:0;color:#535353;font-size:13px;text-align:right;white-space:nowrap}
+.timeline dd span{display:block}
+.awards{list-style:none;padding:0;margin:0 0 15px}
+.awards li{display:grid;grid-template-columns:43px 1fr;gap:13px;margin:10px 0}
+.award-year{color:#535353;font-variant-numeric:tabular-nums}
+footer{display:flex;justify-content:space-between;gap:16px;padding:25px 20px 0;margin-top:12px;color:#666;font-size:11px}
+.skip-link{position:absolute;left:12px;top:-60px;background:#fff;padding:8px 12px;z-index:2}
+.skip-link:focus{top:12px}
+@media(max-width:600px){
+  .page{padding-top:14px}
+  .intro{display:flex;flex-direction:column-reverse;margin-bottom:0}
+  .portrait{padding:10px 20px 0;width:210px}
+  .bio{padding:18px 22px 12px}
+  h1{margin:0 0 20px}
+  .section-intro{padding:18px 22px 0}
+  .paper{grid-template-columns:145px minmax(0,1fr);padding:14px 0;margin-bottom:10px;align-items:start}
+  .paper-image{padding:3px 14px 0 22px;width:145px;min-height:0}
+  .paper-image img{width:109px;max-height:130px}
+  .paper-body{padding-right:22px}
+  .text-section{padding:16px 22px 4px}
+  .timeline>div{grid-template-columns:1fr;gap:1px;margin-bottom:16px}
+  .timeline dd{text-align:left;font-size:12px}
+  .timeline dd span{display:inline}
+  footer{padding-left:22px;padding-right:22px;flex-direction:column;gap:5px}
+}
+@media(max-width:380px){
+  .paper{grid-template-columns:1fr;gap:10px}
+  .paper-image{width:100%;justify-content:flex-start;padding:0 22px}
+  .paper-image img{width:150px;max-height:130px}
+  .paper-body{padding:0 22px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{.page{max-width:none}.skip-link{display:none}.paper{break-inside:avoid}a{color:inherit}.portrait img{width:180px;margin:auto}footer{margin-top:12px}}

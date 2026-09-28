@@ -1,0 +1,6 @@
+# Preserve exact bytes for the static site and downloadable documents.
+* -text
+*.pdf binary
+*.webp binary
+*.jpg binary
+*.woff2 binary
