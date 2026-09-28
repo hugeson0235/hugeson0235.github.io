@@ -29,8 +29,7 @@ h2{font-size:22px;line-height:1.25;font-weight:400;margin:0 0 12px}
 h3{font-size:14px;font-weight:700;line-height:1.45;margin:0 0 4px}
 .authors,.venue,.paper-links{margin:0 0 3px;line-height:1.4}
 .venue{color:#535353}
-.equal-contribution{font-size:11px;white-space:nowrap}
-.summary{margin:9px 0 0;line-height:1.5}
+.corresponding-author{white-space:nowrap}
 .text-section{padding:14px 20px 6px}
 .text-section h2{margin-bottom:15px}
 .timeline{margin:0 0 10px}
