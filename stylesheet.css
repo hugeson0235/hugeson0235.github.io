@@ -25,7 +25,7 @@ h1{font-size:32px;font-weight:400;line-height:1.2;text-align:center;margin:4px 0
 .link-icon{display:inline-block;flex:0 0 1em;width:1em;height:1em;background-color:currentColor;-webkit-mask-image:var(--link-icon);mask-image:var(--link-icon);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
 .icon-envelope{--link-icon:url('assets/icons/envelope.svg')}
 .icon-file-lines{--link-icon:url('assets/icons/file-lines.svg')}
-.icon-google-scholar{--link-icon:url('assets/icons/google-scholar.svg')}
+.icon-graduation-cap{--link-icon:url('assets/icons/graduation-cap.svg')}
 .icon-github{--link-icon:url('assets/icons/github.svg')}
 .icon-linkedin{--link-icon:url('assets/icons/linkedin.svg')}
 .icon-globe{--link-icon:url('assets/icons/globe.svg')}
