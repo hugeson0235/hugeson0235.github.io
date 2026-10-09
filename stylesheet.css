@@ -19,7 +19,17 @@ h1{font-size:32px;font-weight:400;line-height:1.2;text-align:center;margin:4px 0
 .portrait{padding:20px}
 .portrait img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;object-position:50% 52%;border-radius:50%}
 .contact{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 9px;margin-top:19px;line-height:1.8}
-.contact span{color:#7a7a7a}
+.contact>span{color:#7a7a7a}
+.icon-link{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.link-icon{display:inline-block;flex:0 0 1em;width:1em;height:1em;background-color:currentColor;-webkit-mask-image:var(--link-icon);mask-image:var(--link-icon);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+.icon-envelope{--link-icon:url('assets/icons/envelope.svg')}
+.icon-file-lines{--link-icon:url('assets/icons/file-lines.svg')}
+.icon-google-scholar{--link-icon:url('assets/icons/google-scholar.svg')}
+.icon-github{--link-icon:url('assets/icons/github.svg')}
+.icon-linkedin{--link-icon:url('assets/icons/linkedin.svg')}
+.icon-globe{--link-icon:url('assets/icons/globe.svg')}
+.icon-book-open{--link-icon:url('assets/icons/book-open.svg')}
+.icon-file-pdf{--link-icon:url('assets/icons/file-pdf.svg')}
 .section-intro{padding:16px 20px 2px}
 h2{font-size:22px;line-height:1.25;font-weight:400;margin:0 0 12px}
 .paper{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;gap:0;padding:16px 0;margin-bottom:8px;scroll-margin-top:24px}
