@@ -18,7 +18,9 @@ p{margin:0 0 12px}
 h1{font-size:32px;font-weight:400;line-height:1.2;text-align:center;margin:4px 0 24px}
 .portrait{padding:20px}
 .portrait img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover;object-position:50% 52%;border-radius:50%}
-.contact{display:flex;flex-wrap:wrap;justify-content:space-between;gap:5px 12px;margin-top:19px;line-height:1.8}
+.contact{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 8px;margin-top:19px;line-height:1.8}
+.contact-item{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.contact-separator{color:#000;font-size:8px;line-height:1}
 .icon-link{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .link-icon{display:inline-block;flex:0 0 1em;width:1em;height:1em;background-color:currentColor;-webkit-mask-image:var(--link-icon);mask-image:var(--link-icon);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
 .icon-envelope{--link-icon:url('assets/icons/envelope.svg')}
