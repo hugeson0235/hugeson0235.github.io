@@ -69,47 +69,155 @@
   });
   document.head.append(tracker);
 
-  const cleanTarget = url => url.origin + url.pathname;
+  const kinds = new Set(["paper", "section", "figure", "shortcut", "link", "document"]);
+  const descriptor = element => {
+    const value = element.getAttribute("data-analytics") ||
+      (element.classList.contains("paper") ? `paper:${element.id}` :
+        `section:${element.id || "intro"}`);
+    const [kind, id] = value.split(":");
+    // The longest event name stays below Umami's 50-character limit.
+    return kinds.has(kind) && /^[a-z0-9-]{1,28}$/.test(id || "") ? { kind, id } : null;
+  };
+  const related = element => {
+    const paper = element.closest(".paper");
+    const section = element.closest("section");
+    return {
+      ...(paper ? { paper: paper.id } : {}),
+      section: section ? section.id : element.closest(".intro") ? "intro" : "footer"
+    };
+  };
   const linkClick = event => {
     if ((event.type === "click" && event.button !== 0) ||
         (event.type === "auxclick" && event.button !== 1)) return;
-    const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    const anchor = event.target instanceof Element ? event.target.closest("a[data-analytics]") : null;
     if (!anchor) return;
+    const item = descriptor(anchor);
+    if (!item) return;
     const url = new URL(anchor.href, location.href);
-    const label = anchor.textContent.trim().replace(/\s+/g, " ").slice(0, 100);
-    const paper = anchor.closest(".paper");
-    const section = anchor.closest("section");
-    const area = section ? section.id : anchor.closest(".intro") ? "intro" : "footer";
-    if (anchor.hasAttribute("data-cv-link")) {
-      send("cv-open", { area });
-    } else if (anchor.closest(".contact")) {
-      send("contact-click", { label });
-    } else if (anchor.closest(".paper-links")) {
-      send("paper-link", { paper: paper.id, resource: label, target: cleanTarget(url) });
-    } else if (anchor.classList.contains("paper-image")) {
-      send("figure-open", { paper: paper.id });
-    } else if (url.origin === location.origin && url.pathname === location.pathname && url.hash) {
-      send("section-jump", { destination: url.hash.slice(1), area });
-    } else if (url.protocol === "https:" || url.protocol === "http:") {
-      send("external-link", { label, target: cleanTarget(url), area });
-    }
-    // Do not intercept default navigation, modifier keys, or opening a new tab.
+    send(`${item.kind}-click:${item.id}`, {
+      ...related(anchor),
+      // Never copy outbound queries, fragments, email addresses, or share tokens.
+      ...(url.protocol === "https:" || url.protocol === "http:" ? { target: url.origin + url.pathname } : {})
+    });
+    // Each click has one event, preserving default navigation and modifier keys.
   };
   document.addEventListener("click", linkClick, { capture: true, passive: true });
   document.addEventListener("auxclick", linkClick, { capture: true, passive: true });
 
-  const scrollMarks = new Set();
+  const contents = new Map();
+  document.querySelectorAll(".intro, main > section, .paper, [data-analytics]").forEach(element => {
+    const item = descriptor(element);
+    if (item) contents.set(element, {
+      ...item, element, inViewport: false, visible: false, reached: false, viewed: false,
+      visibleMs: 0, reportedMs: 0, marks: new Set(), timer: null
+    });
+  });
+  const milestones = [15, 30, 60, 120, 300];
+  const pageMarks = new Set();
+  let visibleMs = 0;
+  let reportedPageMs = 0;
+  let lastTick = performance.now();
+  let wasVisible = document.visibilityState === "visible";
+  let paused = false;
   let maxScroll = 0;
+  const markTime = (ms, marks, prefix) => {
+    milestones.forEach(seconds => {
+      if (ms >= seconds * 1000 && !marks.has(seconds)) {
+        marks.add(seconds);
+        send(`${prefix}:${seconds}s`);
+      }
+    });
+  };
+  const tick = () => {
+    const now = performance.now();
+    // Cap a delayed tick so suspended browsers/devices do not count as visible time.
+    const delta = wasVisible && !paused ? Math.max(0, Math.min(now - lastTick, 2000)) : 0;
+    lastTick = now;
+    visibleMs += delta;
+    markTime(visibleMs, pageMarks, "page-stay");
+    contents.forEach(item => {
+      if (!item.visible) return;
+      item.visibleMs += delta;
+      markTime(item.visibleMs, item.marks, `${item.kind}-stay:${item.id}`);
+    });
+    wasVisible = document.visibilityState === "visible";
+  };
+  const cancelView = item => {
+    clearTimeout(item.timer);
+    item.timer = null;
+  };
+  const queueView = item => {
+    if (!item.visible || paused || document.visibilityState !== "visible") return;
+    if (!item.reached) {
+      item.reached = true;
+      send(`${item.kind}-reach:${item.id}`);
+    }
+    if (item.viewed || item.timer !== null) return;
+    const image = item.kind === "figure" ? item.element.querySelector("img") : null;
+    if (image && (!image.complete || !image.naturalWidth)) return;
+    item.timer = setTimeout(() => {
+      item.timer = null;
+      if (!item.visible || paused || document.visibilityState !== "visible") return;
+      item.viewed = true;
+      send(`${item.kind}-view:${item.id}`);
+    }, 1000);
+  };
+  const reportTime = item => {
+    const seconds = Math.floor((item.visibleMs - item.reportedMs) / 1000);
+    if (!seconds) return;
+    send(`${item.kind}-time:${item.id}`, { ...related(item.element), visible_seconds: seconds });
+    // Carry fractional seconds forward instead of rounding every visible segment.
+    item.reportedMs += seconds * 1000;
+  };
+  const summarize = () => {
+    contents.forEach(reportTime);
+    const seconds = Math.floor((visibleMs - reportedPageMs) / 1000);
+    if (!seconds) return;
+    send("page-summary", { visible_seconds: seconds, max_scroll: maxScroll });
+    reportedPageMs += seconds * 1000;
+  };
+  const updateVisibility = item => {
+    const image = item.kind === "figure" ? item.element.querySelector("img") : null;
+    const visible = item.inViewport && (!image || (image.complete && image.naturalWidth > 0));
+    if (item.visible === visible) return;
+    item.visible = visible;
+    if (visible) queueView(item);
+    else { cancelView(item); reportTime(item); }
+  };
+  if ("IntersectionObserver" in window) {
+    // Sections span many viewports; papers need 25%, small targets need 50%.
+    [0, 0.25, 0.5].forEach(threshold => {
+      const observer = new IntersectionObserver(entries => {
+        tick();
+        entries.forEach(({ target, isIntersecting, intersectionRatio }) => {
+          const item = contents.get(target);
+          item.inViewport = isIntersecting && intersectionRatio >= threshold;
+          updateVisibility(item);
+        });
+      }, { rootMargin: "-10% 0px -10% 0px", threshold });
+      contents.forEach(item => {
+        const minimum = item.kind === "section" ? 0 : item.kind === "paper" ? 0.25 : 0.5;
+        if (minimum !== threshold) return;
+        observer.observe(item.element);
+        if (item.kind === "figure") item.element.querySelector("img")?.addEventListener("load", () => {
+          tick();
+          updateVisibility(item);
+        });
+      });
+    });
+  }
+
+  const scrollMarks = new Set();
   let scrollFrame = false;
   const measureScroll = () => {
     scrollFrame = false;
-    if (document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible" || paused) return;
     const height = document.documentElement.scrollHeight;
-    maxScroll = Math.max(maxScroll, Math.min(100, Math.round((scrollY + innerHeight) / height * 100)));
+    maxScroll = Math.max(maxScroll, Math.min(100, Math.floor((scrollY + innerHeight) / height * 100)));
     for (const depth of [25, 50, 75, 90, 100]) {
       if (maxScroll >= depth && !scrollMarks.has(depth)) {
         scrollMarks.add(depth);
-        send("scroll-depth", { percent: depth });
+        send(`scroll-reach:${depth}`);
       }
     }
   };
@@ -119,77 +227,34 @@
   window.addEventListener("resize", measureScroll, { passive: true });
   measureScroll();
 
-  // Count one impression only after content remains visible for a second.
-  const contents = [...document.querySelectorAll(".intro, main > section, .paper")];
-  const impressions = new Set();
-  const visible = new Set();
-  const timers = new Map();
-  const contentKey = element => element.id || "intro";
-  const queueImpression = element => {
-    if (impressions.has(element) || timers.has(element)) return;
-    timers.set(element, setTimeout(() => {
-      timers.delete(element);
-      if (document.visibilityState !== "visible" || !visible.has(element)) return;
-      impressions.add(element);
-      const isPaper = element.classList.contains("paper");
-      send(isPaper ? "paper-view" : "section-view", { [isPaper ? "paper" : "section"]: contentKey(element) });
-    }, 1000));
-  };
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(({ target, isIntersecting }) => {
-        if (isIntersecting) {
-          visible.add(target);
-          queueImpression(target);
-        } else {
-          visible.delete(target);
-          clearTimeout(timers.get(target));
-          timers.delete(target);
-        }
-      });
-    }, { rootMargin: "-10% 0px -10% 0px", threshold: 0 });
-    contents.forEach(element => observer.observe(element));
-  }
-
-  // Foreground time stops when hidden; milestones bound the number of events.
-  let visibleMs = 0;
-  let lastTick = performance.now();
-  let wasVisible = document.visibilityState === "visible";
-  let previousSummaryMs = 0;
-  const timeMarks = new Set();
-  const tick = () => {
-    const now = performance.now();
-    if (wasVisible) visibleMs += Math.max(0, Math.min(now - lastTick, 2000));
-    lastTick = now;
-    wasVisible = document.visibilityState === "visible";
-    for (const seconds of [15, 30, 60, 120, 300]) {
-      if (visibleMs >= seconds * 1000 && !timeMarks.has(seconds)) {
-        timeMarks.add(seconds);
-        send("visible-time", { seconds });
-      }
-    }
-  };
-  const summarize = () => {
-    const delta = visibleMs - previousSummaryMs;
-    if (delta < 1000) return;
-    send("visit-summary", { visible_seconds: Math.round(delta / 1000), max_scroll: maxScroll });
-    previousSummaryMs = visibleMs;
-  };
   let clock = setInterval(tick, 1000);
   document.addEventListener("visibilitychange", () => {
     tick();
     if (document.visibilityState === "hidden") {
       summarize();
-      timers.forEach(clearTimeout);
-      timers.clear();
+      contents.forEach(cancelView);
     } else {
-      visible.forEach(queueImpression);
+      contents.forEach(queueView);
       measureScroll();
     }
   });
-  window.addEventListener("pagehide", () => { tick(); summarize(); clearInterval(clock); });
+  window.addEventListener("pagehide", () => {
+    tick();
+    paused = true;
+    wasVisible = false;
+    summarize();
+    contents.forEach(cancelView);
+    clearInterval(clock);
+  });
   window.addEventListener("pageshow", event => {
-    if (event.persisted) { lastTick = performance.now(); wasVisible = true; clock = setInterval(tick, 1000); }
+    if (!event.persisted) return;
+    paused = false;
+    lastTick = performance.now();
+    wasVisible = document.visibilityState === "visible";
+    clearInterval(clock);
+    clock = setInterval(tick, 1000);
+    contents.forEach(queueView);
+    measureScroll();
   });
 
   // Record error categories and public asset paths, not exception messages or stacks.
