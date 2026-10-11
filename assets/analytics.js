@@ -20,6 +20,9 @@
   const pending = [];
   const send = (name, data) => {
     if (failed) return;
+    try {
+      if (localStorage.getItem("umami.disabled")) return;
+    } catch (_) {}
     if (!ready) {
       if (pending.length < 50) pending.push([name, data]);
       return;
@@ -38,13 +41,7 @@
   tracker.dataset.autoPageview = "false";
   tracker.dataset.performance = "false";
   tracker.dataset.excludeHash = "true";
-  tracker.dataset.beforeSend = "siteAnalyticsBeforeSend";
-  window.siteAnalyticsBeforeSend = (type, payload) => {
-    try {
-      if (localStorage.getItem("umami.disabled")) return false;
-    } catch (_) {}
-    return payload;
-  };
+  // No before-send hook: start the native keepalive request synchronously on departure.
   tracker.addEventListener("error", () => { failed = true; pending.length = 0; });
   tracker.addEventListener("load", () => {
     ready = Boolean(window.umami && typeof window.umami.track === "function");
