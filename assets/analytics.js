@@ -1,4 +1,4 @@
-/* One pageview on arrival, one event per click, one summary on departure. */
+/* Native pageviews plus one clearly named event per click. */
 (() => {
   "use strict";
   const config = window.SITE_ANALYTICS;
@@ -41,7 +41,7 @@
   tracker.dataset.autoPageview = "false";
   tracker.dataset.performance = "false";
   tracker.dataset.excludeHash = "true";
-  // No before-send hook: start the native keepalive request synchronously on departure.
+  // No before-send hook or automatic events.
   tracker.addEventListener("error", () => { failed = true; pending.length = 0; });
   tracker.addEventListener("load", () => {
     ready = Boolean(window.umami && typeof window.umami.track === "function");
@@ -49,12 +49,6 @@
     pending.splice(0).forEach(([name, data]) => send(name, data));
   });
 
-  let startedAt = performance.now();
-  let visibleAt = document.visibilityState === "visible" ? startedAt : null;
-  let visibleMs = 0;
-  let clicks = 0;
-  let maxScroll = 0;
-  let ended = false;
   // Queue arrival first, even if the tracker has not loaded yet. No duplicate custom event.
   send();
   document.head.append(tracker);
@@ -69,8 +63,13 @@
     };
   };
   const kinds = new Set(["paper", "section", "figure", "shortcut", "link", "document"]);
+  const paperNames = { agentrvos: "AgentRVOS", playground: "PLAYGROUND", ask4nv: "Ask4NV", reanchor: "ReAnchor" };
+  const sectionNames = {
+    intro: "Introduction", research: "Research", experience: "Experience",
+    education: "Education", awards: "Honors & Awards", footer: "Footer"
+  };
   const click = event => {
-    if (ended || !(event.target instanceof Element)) return;
+    if (!(event.target instanceof Element)) return;
     if ((event.type === "click" && event.button !== 0) ||
         (event.type === "auxclick" && event.button !== 1)) return;
     const interactive = event.target.closest("a, button, [role='button'], [data-analytics]");
@@ -98,56 +97,22 @@
         }
       } catch (_) {}
     }
-    clicks += 1;
-    send("click", data);
+    let name = label || target;
+    if (category === "shortcut") name = `Shortcut / ${paperNames[id] || sectionNames[id] || label}`;
+    else if (category === "figure") name = `${paperNames[context.paper] || context.paper} / Figure 3`;
+    else if (category === "paper") name = `${paperNames[context.paper] || context.paper} / Text`;
+    else if (category === "section") name = `Section / ${sectionNames[context.section] || context.section}`;
+    else if (category === "page") name = "Page / Background";
+    else if (context.paper) name = `${paperNames[context.paper] || context.paper} / ${label}`;
+    // The Events chart itself shows the clicked target; Properties retain the full details.
+    send(`click: ${name}`.slice(0, 50), data);
     // Do not prevent, delay, or replace the browser's default navigation.
   };
   document.addEventListener("click", click, { capture: true, passive: true });
   document.addEventListener("auxclick", click, { capture: true, passive: true });
 
-  const measureScroll = () => {
-    if (ended || document.visibilityState !== "visible") return;
-    const height = document.documentElement.scrollHeight;
-    if (height > 0) maxScroll = Math.max(maxScroll,
-      Math.min(100, Math.max(0, Math.floor((scrollY + innerHeight) / height * 100))));
-  };
-  window.addEventListener("scroll", measureScroll, { passive: true });
-  window.addEventListener("resize", measureScroll, { passive: true });
-  measureScroll();
-
-  document.addEventListener("visibilitychange", () => {
-    if (ended) return;
-    const now = performance.now();
-    if (visibleAt !== null) visibleMs += Math.max(0, now - visibleAt);
-    visibleAt = document.visibilityState === "visible" ? now : null;
-    measureScroll();
-    // Switching tabs/apps updates local timing only; it does not send an event.
-  });
-  window.addEventListener("pagehide", () => {
-    if (ended) return;
-    const now = performance.now();
-    if (visibleAt !== null) visibleMs += Math.max(0, now - visibleAt);
-    measureScroll();
-    ended = true;
-    visibleAt = null;
-    // Umami's native transport uses fetch keepalive. Departure delivery is best effort.
-    send("page-leave", {
-      visible_seconds: Math.floor(visibleMs / 1000),
-      elapsed_seconds: Math.floor(Math.max(0, now - startedAt) / 1000),
-      clicks,
-      max_scroll: maxScroll
-    });
-  });
   window.addEventListener("pageshow", event => {
-    if (!event.persisted || !ended) return;
-    // Returning from the back/forward cache starts a new arrival/departure cycle.
-    startedAt = performance.now();
-    visibleAt = document.visibilityState === "visible" ? startedAt : null;
-    visibleMs = 0;
-    clicks = 0;
-    maxScroll = 0;
-    ended = false;
-    measureScroll();
-    send();
+    // A real back/forward-cache restoration counts as a new native pageview.
+    if (event.persisted) send();
   });
 })();
