@@ -5,6 +5,5 @@ window.SITE_ANALYTICS = Object.freeze({
   "dashboardUrl": "https://cloud.umami.is/analytics/us/websites/91ff9691-5a7f-4756-a685-5e43f76bac8e",
   "allowedDomains": [
     "hugeson0235.github.io"
-  ],
-  "recorderUrl": ""
+  ]
 });
